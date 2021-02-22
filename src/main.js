@@ -76,7 +76,7 @@ controls.enabled = true;
 controls.enableDamping = true;
 controls.dampingFactor = 0.1;
 
-camera.position.set(6, 6, 6);
+camera.position.set(10, 10, 10);
 camera.lookAt(scene.position);
 scene.add(camera);
 controls.saveState();

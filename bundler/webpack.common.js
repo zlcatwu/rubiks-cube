@@ -21,7 +21,7 @@ module.exports = {
             filename: 'index.html',
             template: path.resolve(__dirname, '../src/index.html'),
             minify: true,
-            title: 'template'
+            title: 'rubiks-cube'
         }),
         new MiniCSSExtractPlugin({
             filename: 'styles.css'
