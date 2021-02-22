@@ -8,7 +8,9 @@ module.exports = merge(
         mode: 'development',
         devServer: {
             contentBase: path.resolve(__dirname, '../public'),
-            contentBasePublicPath: '/rubiks-cube/'
+            contentBasePublicPath: '/rubiks-cube/',
+            host: '0.0.0.0',
+            port: 8080
         }
     }
 )

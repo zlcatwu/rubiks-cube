@@ -10,7 +10,13 @@ import './styles.css';
  * Base
  */
 
+
 const canvas = document.querySelector('#canvas');
+
+// 修复手机浏览器下
+canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+});
 
 const sizes = {
     width: window.innerWidth,
