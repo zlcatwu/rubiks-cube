@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import * as dat from 'dat.gui';
 import * as Stats from 'stats.js';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import gsap from 'gsap';
 
 import './styles.css';
@@ -71,15 +70,9 @@ const scene = new THREE.Scene();
  */
 
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 1000)
-const controls = new OrbitControls(camera, canvas);
-controls.enabled = true;
-controls.enableDamping = true;
-controls.dampingFactor = 0.1;
-
 camera.position.set(10, 10, 10);
 camera.lookAt(scene.position);
 scene.add(camera);
-controls.saveState();
 
 
 /**
@@ -320,6 +313,68 @@ const rotateCube = ({ dragOffset = {}, faceDirection, onComplete }) => {
         }
     });
 };
+const rotateAll = ({ dragOffset = {} }) => {
+    let rotateAxis = new THREE.Vector3();
+    let positive = 1;
+    if (Math.abs(dragOffset.x) > Math.abs(dragOffset.y)) {
+        rotateAxis.set(0, 1, 0);
+        dragOffset.x < 0 && (positive = -1);
+    }
+
+    if (Math.abs(dragOffset.y) > Math.abs(dragOffset.x)) {
+        rotateAxis.set(1, 0, 0);
+        dragOffset.y > 0 && (positive = -1);
+    }
+
+    cubes.forEach(cube => {
+        cube.userData.preStatus = {
+            position: cube.position.clone(),
+            rotation: cube.rotation.clone()
+        }; 
+    });
+    const progress = { value: 0 };
+    isRotating = true;
+    gsap.fromTo(progress, { value: 0 }, {
+        value: 1,
+        duration: 0.3,
+        onUpdate: () => {
+            cubes.forEach(cube => {
+                cube.position.copy(cube.userData.preStatus.position);
+                cube.rotation.copy(cube.userData.preStatus.rotation);
+                cube.applyMatrix4(
+                    new THREE.Matrix4()
+                        .makeTranslation(cube.userData.x, cube.userData.y, cube.userData.z)
+                        .makeRotationAxis(
+                            rotateAxis,
+                            positive * Math.PI / 2 * progress.value
+                        )
+                );
+            });
+        },
+        onComplete: () => {
+            cubes.forEach(cube => {
+                const { x, y, z } = cube.userData;
+                const vec = roundVector(new THREE.Vector3(x, y, z)
+                    .applyMatrix4(
+                        new THREE.Matrix4()
+                            .makeTranslation(x, y, z)
+                            .makeRotationAxis(
+                                rotateAxis,
+                                positive * Math.PI / 2 * progress.value
+                            )
+                    ));
+                cube.userData.x = vec.x;
+                cube.userData.y = vec.y;
+                cube.userData.z = vec.z;
+            });
+            
+            cubes.forEach(cube => roundVector(cube.position));
+            isRotating = false;
+        }
+    });
+
+    
+};
 const renderAndRotateCube = () => {
     renderCube();
     randomCube(paramters.cube.randomness);
@@ -407,18 +462,21 @@ canvas.addEventListener('pointerdown', e => {
     dragStart = { x: pos.x, y: pos.y };
 });
 canvas.addEventListener('pointerup', e => {
+    if (isRotating) { return }
     const pos = parseMousePos(e);
     const dragOffset = {
         x: pos.x - dragStart.x,
         y: pos.y - dragStart.y
     };
     const isMove = val => Math.abs(val) >= paramters.control.threshold
-    if ((isMove(dragOffset.x) || isMove(dragOffset.y)) && dragStartObj) {
-        !isRotating && rotateCube({ dragOffset });
+    if ((isMove(dragOffset.x) || isMove(dragOffset.y))) {
+        if (dragStartObj) {
+            rotateCube({ dragOffset });
+        } else {
+            rotateAll({ dragOffset });
+        }
     }
-    controls.reset();
     dragStart = null;
-    // console.log(dragStartObj);
 });
 
 
@@ -430,8 +488,6 @@ canvas.addEventListener('pointerup', e => {
 const tick = () => {
     stats.begin();
     
-    controls.update();
-    
     dragStartObj = null;
     if (dragStart) {
         const raycaster = new THREE.Raycaster();
@@ -440,7 +496,6 @@ const tick = () => {
         dragStartObj = intersects[0]?.object;
         dragStartFace = intersects[0]?.face;
     }
-    controls.enabled = !dragStartObj;
 
     renderer.render(scene, camera);
     
